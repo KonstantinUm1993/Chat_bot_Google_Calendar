@@ -58,45 +58,40 @@ class States(StatesGroup):
     choosing_calendar_name = State()
 
 def create_buttons():
-    button_list=[[types.KeyboardButton(text="Выслать расписание на день")], 
-                 [types.KeyboardButton(text="Поставить встречу в календаре")], 
-                 [types.KeyboardButton(text="Посмотреть расписание встреч коллеги")
-                 ]]
-    builder=ReplyKeyboardMarkup(keyboard=button_list, resize_keyboard=True)
+    button_list_2=[
+        [types.InlineKeyboardButton(text="Расписание на сегодня", callback_data="Today_events")],
+        [types.InlineKeyboardButton(text="Расписание на выбранный день", callback_data="Choosen_day_events")]
+        [types.InlineKeyboardButton(text="Поставить встречу в календаре", callback_data="Meeting_create")], 
+        [types.InlineKeyboardButton(text="Посмотреть расписание встреч коллеги", callback_data="Show_schedule_of_collegue")]
+    ]
+    builder=InlineKeyboardMarkup(inline_keyboard=button_list_2)
     return builder
 
 
 @dp.message(Command("start"))
 async def Start(message:types.Message):
-    button_list_2=[
-        [types.InlineKeyboardButton(text="Расписание на сегодня", callback_data="Today_events")],
-        [types.InlineKeyboardButton(text="Поставить встречу в календаре", callback_data="Meeting_create")], 
-        [types.InlineKeyboardButton(text="Посмотреть расписание встреч коллеги", callback_data="Show_schedule_of_collegue")]
-    ]
-    builder=InlineKeyboardMarkup(inline_keyboard=button_list_2)
-
-    await message.answer(text="Приветствую! Вы подписались на бот уведомлений по Гугл Календарю!", reply_markup=builder)
+    await message.answer(text="Приветствую! Вы подписались на бот уведомлений по Гугл Календарю!", reply_markup=create_buttons())
 
 
 @dp.callback_query(F.data=="Today_events")
 async def Text_for_user(callback:types.CallbackQuery):
-        
-        button_list_2=[
-        [types.InlineKeyboardButton(text="Расписание на сегодня", callback_data="Today_events")],
-        [types.InlineKeyboardButton(text="Поставить встречу в календаре", callback_data="Meeting_create")], 
-        [types.InlineKeyboardButton(text="Посмотреть расписание встреч коллеги", callback_data="Show_schedule_of_collegue")]
-    ]
-        builder=InlineKeyboardMarkup(inline_keyboard=button_list_2)
-
         Text = ""
         now=datetime.utcnow().isoformat()+"Z"
+        print(now)
         events_results=(service.events().list(calendarId="primary",timeMin=now, timeMax=datetime.combine(date.today(),time.max).isoformat()+"Z", maxResults=5, singleEvents=True, orderBy="startTime").execute())
         Events=events_results.get("items",[])
         for event in Events:
             start = event["start"].get("dateTime", event["start"].get("date"))
             Text += f"{start} {event["summary"]}\n"
-        await callback.message.edit_text(text=Text, reply_markup=builder)        
+        try:
+            await callback.message.edit_text(text=Text, reply_markup=create_buttons()) 
+        except(aiogram.exceptions.TelegramBadRequest):
+            await callback.message.edit_text(text="Календарь на этот день пуст, события отсутствуют", reply_markup=create_buttons())  
         await callback.answer()
+
+#@dp.callback_query(F.data=="Choosen_day_events")
+
+
  
 @dp.message(F.text, States.choosing_calendar_name)
 async def Choosing_calendar_name(message:types.Message, state: FSMContext):
