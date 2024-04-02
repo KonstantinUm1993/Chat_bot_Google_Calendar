@@ -60,7 +60,7 @@ class States(StatesGroup):
 def create_buttons():
     button_list_2=[
         [types.InlineKeyboardButton(text="Расписание на сегодня", callback_data="Today_events")],
-        [types.InlineKeyboardButton(text="Расписание на выбранный день", callback_data="Choosen_day_events")]
+        [types.InlineKeyboardButton(text="Расписание на выбранный день", callback_data="Choosen_day_events")],
         [types.InlineKeyboardButton(text="Поставить встречу в календаре", callback_data="Meeting_create")], 
         [types.InlineKeyboardButton(text="Посмотреть расписание встреч коллеги", callback_data="Show_schedule_of_collegue")]
     ]
@@ -72,12 +72,16 @@ def create_buttons():
 async def Start(message:types.Message):
     await message.answer(text="Приветствую! Вы подписались на бот уведомлений по Гугл Календарю!", reply_markup=create_buttons())
 
+@dp.callback_query(F.data=="start_2")
+async def Start_2(callback:types.CallbackQuery):
+    await callback.message.edit_text(text="Приветствую! Вы подписались на бот уведомлений по Гугл Календарю!", reply_markup=create_buttons())
+    await callback.answer()
+
 
 @dp.callback_query(F.data=="Today_events")
 async def Text_for_user(callback:types.CallbackQuery):
         Text = ""
         now=datetime.utcnow().isoformat()+"Z"
-        print(now)
         events_results=(service.events().list(calendarId="primary",timeMin=now, timeMax=datetime.combine(date.today(),time.max).isoformat()+"Z", maxResults=5, singleEvents=True, orderBy="startTime").execute())
         Events=events_results.get("items",[])
         for event in Events:
@@ -89,7 +93,31 @@ async def Text_for_user(callback:types.CallbackQuery):
             await callback.message.edit_text(text="Календарь на этот день пуст, события отсутствуют", reply_markup=create_buttons())  
         await callback.answer()
 
-#@dp.callback_query(F.data=="Choosen_day_events")
+@dp.callback_query(F.data=="Choosen_day_events")
+async def Choosing_calendar_date(callback:types.CallbackQuery):
+    spisok = []
+    n = 1
+    for i in range(1,8):
+        button_line = []
+        for j in range(1,6):
+            if n < 32:
+                button_line.append(types.InlineKeyboardButton(text=f"{n}", callback_data="Choosen_day"))
+                n += 1
+            else:
+                button_line.append(types.InlineKeyboardButton(text=" ", callback_data="Choosen_day"))
+
+        
+        
+        spisok.append(button_line)
+    spisok.append([types.InlineKeyboardButton(text=f"Назад", callback_data="start_2")])
+    builder=InlineKeyboardMarkup(inline_keyboard=spisok)
+    await callback.message.edit_text(text="Выберите день месяца!", reply_markup=builder)
+    await callback.answer()    
+
+    
+
+
+        
 
 
  
